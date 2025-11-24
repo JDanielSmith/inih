@@ -1,2 +1,7 @@
 fuzzing/findings
 fuzzing/inihfuzz
+
+.vs/
+*.vcxproj.user
+*/x64/Debug/
+x64/Debug/
