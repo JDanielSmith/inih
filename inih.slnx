@@ -1,7 +1,11 @@
 <Solution>
   <Configurations>
+    <Platform Name="Any CPU" />
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/Solution Items/" />
+  <Project Path="../Crt/Crt/Crt.csproj" />
+  <Project Path="cs/cs.csproj" Id="20064127-8e1d-448d-bf29-c72d20ee2fee" />
   <Project Path="inih\c.vcxproj" Id="7275ede9-31b2-444c-8831-c08618717019" />
 </Solution>

@@ -5,3 +5,5 @@ fuzzing/inihfuzz
 *.vcxproj.user
 */x64/Debug/
 x64/Debug/
+**/bin/*
+**/obj/*
