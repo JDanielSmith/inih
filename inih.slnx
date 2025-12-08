@@ -8,4 +8,5 @@
   <Project Path="../Crt/Crt/Crt.csproj" />
   <Project Path="cs/cs.csproj" Id="20064127-8e1d-448d-bf29-c72d20ee2fee" />
   <Project Path="inih\c.vcxproj" Id="7275ede9-31b2-444c-8831-c08618717019" />
+  <Project Path="Test_inih/Test_inih.csproj" Id="eeda9da7-aba6-4f5a-816a-b62abed3dc55" />
 </Solution>

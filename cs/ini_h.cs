@@ -11,9 +11,6 @@ https://github.com/benhoyt/inih
 
 */
 
-/* Nonzero if ini_handler callback should accept lineno parameter. */
-#undef INI_HANDLER_LINENO
-
 using Crt;
 
 namespace inih;
@@ -73,7 +70,6 @@ public static partial class ini
 	   strlen(). Useful for parsing INI data from a network socket or which is
 	   already in memory, or interfacing with C++ std::string_view. */
 	public static partial int ini_parse_string_length(ConstPointer<char> @string, size_t length, ini_handler handler, VoidPointer user);
-
 
 	/* Chars that begin a start-of-line comment. Per Python configparser, allow
 	   both ; and # comments at the start of a line by default. */

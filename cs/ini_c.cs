@@ -11,14 +11,48 @@ https://github.com/benhoyt/inih
 
 */
 
+/* Nonzero to allow multi-line value parsing, in the style of Python's
+   configparser. If allowed, ini_parse() will call the handler with the same
+   name for each subsequent line parsed. */
+#define INI_ALLOW_MULTILINE
+
+/* Nonzero to allow a UTF-8 BOM sequence (0xEF 0xBB 0xBF) at the start of
+   the file. See https://github.com/benhoyt/inih/issues/21 */
+#define INI_ALLOW_BOM
+
+/* Nonzero to allow inline comments (with valid inline comment characters
+   specified by INI_INLINE_COMMENT_PREFIXES). Set to 0 to turn off and match
+   Python 3.2+ configparser behaviour. */
+#define INI_ALLOW_INLINE_COMMENTS
+
 /* Nonzero to use stack for line buffer, zero to use heap (malloc/free). */
-#undef INI_USE_STACK
+#define INI_USE_STACK
 
 /* Nonzero to allow heap line buffer to grow via realloc(), zero for a
    fixed-size buffer of INI_MAX_LINE bytes. Only applies if INI_USE_STACK is
    zero. */
-#define INI_ALLOW_REALLOC
+#undef INI_ALLOW_REALLOC
 
+/* Stop parsing on first error (default is to keep parsing). */
+#undef INI_STOP_ON_FIRST_ERROR
+
+
+/* Nonzero to call the handler at the start of each new section (with
+   name and value NULL). Default is to only call the handler on
+   each name=value pair. */
+#undef INI_CALL_HANDLER_ON_NEW_SECTION
+
+/* Nonzero to allow a name without a value (no '=' or ':' on the line) and
+   call the handler with value NULL in this case. Default is to treat
+   no-value lines as an error. */
+#undef INI_ALLOW_NO_VALUE
+
+
+/* Nonzero to use custom ini_malloc, ini_free, and ini_realloc memory
+   allocation functions (INI_USE_STACK must also be 0). These functions must
+   have the same signatures as malloc/free/realloc and behave in a similar
+   way. ini_realloc is only needed if INI_ALLOW_REALLOC is set. */
+#undef INI_CUSTOM_ALLOCATOR
 
 global using size_t = ulong;
 
@@ -74,19 +108,14 @@ public static partial class ini
 	}
 	static Pointer<char> ini_find_chars_or_comment(ConstPointer<char> s, string chars)
 	{
-		throw new NotImplementedException();
+		return ini_find_chars_or_comment(s, chars.AsConstPointer());
 	}
 
 	/* Similar to strncpy, but ensures dest (size bytes) is
 	   NUL-terminated, and doesn't pad with NULs. */
 	static Pointer<char> ini_strncpy0(Pointer<char> dest, ConstPointer<char> src, size_t size)
 	{
-		/* Could use strncpy internally, but it causes gcc warnings (see issue #91) */
-		size_t i;
-		for (i = 0; i < size - 1 && ne_0(src[i]); i++)
-			dest[i] = src[i];
-		dest[i] = '\0';
-		return dest;
+		return strncpy(dest, src, size);
 	}
 
 	/* See documentation in header file. */
@@ -100,7 +129,8 @@ public static partial class ini
 	{
 		/* Uses a fair bit of stack (use heap instead if you need to) */
 		#if INI_USE_STACK
-		char line[INI_MAX_LINE];
+		char[] line_ = new char[INI_MAX_LINE];
+		Pointer<char> line = line_;
 		size_t max_line = INI_MAX_LINE;
 		#else
 		Pointer<char> line;
@@ -111,7 +141,8 @@ public static partial class ini
 		#endif
 		var section = new char[MAX_SECTION]; strcpy(section, "");
 		#if INI_ALLOW_MULTILINE
-		char prev_name[MAX_NAME] = "";
+		char[] prev_name_ = new char[MAX_NAME]; strcpy(prev_name_, "");
+		Pointer<char> prev_name = prev_name_;
 		#endif
 
 		size_t offset;
@@ -178,9 +209,9 @@ public static partial class ini
 
 			start = line;
 			#if INI_ALLOW_BOM
-			if (lineno == 1 && (unsigned char)start[0] == 0xEF &&
-							   (unsigned char)start[1] == 0xBB &&
-							   (unsigned char)start[2] == 0xBF) {
+			if (lineno == 1 && (char)start[0] == 0xEF &&
+							   (char)start[1] == 0xBB &&
+							   (char)start[2] == 0xBF) {
 				start += 3;
 			}
 			#endif
@@ -191,7 +222,7 @@ public static partial class ini
 				/* Start-of-line comment */
 			}
 			#if INI_ALLOW_MULTILINE
-			else if (*prev_name && x(start) && start > line) {
+			else if (x_ne_0(prev_name) && x_ne_0(start) && start > line) {
 				#if INI_ALLOW_INLINE_COMMENTS
 				end = ini_find_chars_or_comment(start, VoidPointer.Null);
 				x(end) = '\0';
@@ -199,7 +230,7 @@ public static partial class ini
 				#endif
 				/* Non-blank line with leading whitespace, treat as continuation
 				   of previous name's value (as per Python configparser). */
-				if (!HANDLER(user, section, prev_name, start) && !error)
+				if (ne_0(HANDLER(user, section, prev_name, start)) && ne_0(error))
 					error = lineno;
 			}
 			#endif
@@ -212,7 +243,7 @@ public static partial class ini
 					x(end) = '\0';
 					ini_strncpy0(section, start + 1, @sizeof(section));
 					#if INI_ALLOW_MULTILINE
-					*prev_name = '\0';
+					x(prev_name) = '\0';
 					#endif
 					#if INI_CALL_HANDLER_ON_NEW_SECTION
 					if (!HANDLER(user, section, VoidPointer.Null, VoidPointer.Null) && !error)
@@ -242,7 +273,7 @@ public static partial class ini
 					ini_rstrip(value, end);
 
 					#if INI_ALLOW_MULTILINE
-					ini_strncpy0(prev_name, name, sizeof(prev_name));
+					ini_strncpy0(prev_name, name, @sizeof(prev_name_));
 					#endif
 					/* Valid name[=:]value pair found, call handler */
 					if (ne_0(HANDLER(user, section, name, value)) && ne_0(error))
@@ -263,10 +294,10 @@ public static partial class ini
 				}
 			}
 
-	#if INI_STOP_ON_FIRST_ERROR
+			#if INI_STOP_ON_FIRST_ERROR
 			if (error)
 				break;
-	#endif
+			#endif
 		}
 
 		#if !INI_USE_STACK
@@ -278,7 +309,7 @@ public static partial class ini
 
 	static Pointer<char> fgets(Pointer<char> str, int n, VoidPointer stream)
 	{
-		throw new NotImplementedException();
+		return stdio.fgets(str, n, (Pointer<FILE>)stream);
 	}
 	/* See documentation in header file. */
 	public static partial int ini_parse_file(Pointer<FILE> file, ini_handler handler, VoidPointer user)
