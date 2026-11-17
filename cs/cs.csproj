@@ -11,7 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Crt\Crt\Crt.csproj" />
+    <ProjectReference Include="..\..\CLike\Crt\Crt\Crt.csproj" />
   </ItemGroup>
 
 </Project>

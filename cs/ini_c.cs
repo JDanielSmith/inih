@@ -14,6 +14,9 @@ https://github.com/benhoyt/inih
 /* Nonzero to allow multi-line value parsing, in the style of Python's
    configparser. If allowed, ini_parse() will call the handler with the same
    name for each subsequent line parsed. */
+
+// Ignore Spelling: ini
+
 #define INI_ALLOW_MULTILINE
 
 /* Nonzero to allow a UTF-8 BOM sequence (0xEF 0xBB 0xBF) at the start of

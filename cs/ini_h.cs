@@ -11,6 +11,9 @@ https://github.com/benhoyt/inih
 
 */
 
+
+// Ignore Spelling: ini
+
 using Crt;
 
 namespace inih;
@@ -25,8 +28,8 @@ public static partial class ini
 	*/
 #if INI_HANDLER_LINENO
 	typedef int (*ini_handler)(void* user, const char* section,
-                           const char* name, const char* value,
-                           int lineno);
+						   const char* name, const char* value,
+						   int lineno);
 #else
 	public delegate int ini_handler(VoidPointer user, ConstPointer<char> section,
 						   ConstPointer<char> name, ConstPointer<char> value);
