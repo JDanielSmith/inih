@@ -259,7 +259,7 @@ public static partial class ini
 					error = lineno;
 				}
 			}
-			else if (x(start) == '\0')
+			else if (x_ne_0(start))
 			{
 				/* Not a comment, must be a name[=:]value pair */
 				end = ini_find_chars_or_comment(start, "=:");
@@ -310,13 +310,10 @@ public static partial class ini
 		return error;
 	}
 
-	static Pointer<char> fgets(Pointer<char> str, int n, VoidPointer stream)
-	{
-		return stdio.fgets(str, n, (Pointer<FILE>)stream);
-	}
 	/* See documentation in header file. */
 	public static partial int ini_parse_file(Pointer<FILE> file, ini_handler handler, VoidPointer user)
 	{
+		static Pointer<char> fgets(Pointer<char> str, int n, VoidPointer stream) => stdio.fgets(str, n, (Pointer<FILE>)stream);
 		return ini_parse_stream((ini_reader)fgets, file, handler, user);
 	}
 
