@@ -9,7 +9,7 @@ namespace Test_inih;
 
 internal static partial class unittest
 {
-	static int[] User = [0];
+	static int[] User_ = [default]; 	static ref int User => ref User_[0];
 	static char[] Prev_section = new char[50];
 
 #if INI_HANDLER_LINENO
@@ -20,7 +20,7 @@ internal static partial class unittest
 		   ConstPointer<char> value)
 #endif
 	{
-		User[0] = x((Pointer<int>)user);
+		User = x((Pointer<int>)user);
 		if (!name || (bool)strcmp(section, Prev_section))
 		{
 			printf("... [%s]\n", section);
@@ -48,22 +48,17 @@ internal static partial class unittest
 	}
 
 
-	static int parse(ConstPointer<char> fname) => new parse_(fname).Invoke();
-	sealed class parse_(ConstPointer<char> fname)
+	static int parse(ConstPointer<char> fname) =>  parse_.Invoke(fname);
+	static class parse_
 	{
-		static int[] u = [100];
-		internal int Invoke()
+		static int[] u_ = [100]; static ref int u => ref u_[0];
+		static internal int Invoke(ConstPointer<char> fname)
 		{
 			int e;
 			Prev_section[0] = '\0';
-			e = ini_parse(fname, dumper, AddressOf(u));
-			if (e == -1)
-			{
-				printf("%s: can't open file\n", fname);
-				return e;
-			}
+			e = ini_parse(fname, dumper, AddressOf(u_));
 			printf("%s: e=%d user=%d\n", fname, e, User);
-			u[0]++;
+			u++;
 			return e;
 		}
 

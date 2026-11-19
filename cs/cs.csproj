@@ -10,6 +10,14 @@
     <RootNamespace>inih</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DefineConstants>$(DefineConstants);INI_ALLOW_MULTILINE;INI_ALLOW_INLINE_COMMENTS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);INI_ALLOW_MULTILINE;INI_ALLOW_INLINE_COMMENTS</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\CLike\Crt\Crt\Crt.csproj" />
   </ItemGroup>

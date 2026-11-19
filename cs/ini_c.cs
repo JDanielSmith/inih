@@ -60,10 +60,10 @@ https://github.com/benhoyt/inih
 global using size_t = ulong;
 
 using Crt;
+using Crt.System;
 using static Crt.stdio;
 using static Crt.ctype;
 using static Crt.@string;
-
 using static Crt.stdlib;
 
 namespace inih;
@@ -93,7 +93,7 @@ public static partial class ini
 	/* Return pointer to first non-whitespace char in given @string. */
 	static Pointer<char> ini_lskip(ConstPointer<char> s)
 	{
-		while (x_ne_0(s) && isspace(x(s)))
+		while (x_(s) && isspace(x(s)))
 			s++;
 		return (Pointer<char>)s;
 	}
@@ -103,16 +103,23 @@ public static partial class ini
 	   be prefixed by a whitespace character to register as a comment. */
 	static Pointer<char> ini_find_chars_or_comment(ConstPointer<char> s, ConstPointer<char> chars)
 	{
-		while (x_ne_0(s) && (!chars || !strchr(chars, x(s))))
+#if INI_ALLOW_INLINE_COMMENTS
+		bool  was_space = false;
+		while (x_(s) && (!chars || !strchr(chars, x(s))) &&
+			   !(was_space && strchr(INI_INLINE_COMMENT_PREFIXES, x(s))))
+		{
+			was_space = isspace(x(s));
+			s++;
+		}
+#else
+		while (x_(s) && (!chars || !strchr(chars, x(s))))
 		{
 			s++;
 		}
+#endif
 		return (Pointer<char>)s;
 	}
-	static Pointer<char> ini_find_chars_or_comment(ConstPointer<char> s, string chars)
-	{
-		return ini_find_chars_or_comment(s, chars.AsConstPointer());
-	}
+	static Pointer<char> ini_find_chars_or_comment(ConstPointer<char> s, string chars) =>  ini_find_chars_or_comment(s, chars.AsConstPointer());
 
 	/* Similar to strncpy, but ensures dest (size bytes) is
 	   NUL-terminated, and doesn't pad with NULs. */
@@ -144,7 +151,7 @@ public static partial class ini
 		#endif
 		var section = new char[MAX_SECTION]; strcpy(section, "");
 		#if INI_ALLOW_MULTILINE
-		char[] prev_name_ = new char[MAX_NAME]; strcpy(prev_name_, "");
+		var prev_name_ = new char[MAX_NAME]; strcpy(prev_name_, "");
 		Pointer<char> prev_name = prev_name_;
 		#endif
 
@@ -202,7 +209,7 @@ public static partial class ini
 			{
 				while (reader(abyss, SizeOf(abyss), stream) != VoidPointer.Null)
 				{
-					if (ne_0(error))
+					if (!error)
 						error = lineno;
 					abyss_len = strlen(abyss);
 					if (abyss_len > 0 && abyss[(int)(abyss_len - 1)] == '\n')
@@ -224,19 +231,20 @@ public static partial class ini
 			{
 				/* Start-of-line comment */
 			}
-			#if INI_ALLOW_MULTILINE
-			else if (x_ne_0(prev_name) && x_ne_0(start) && start > line) {
-				#if INI_ALLOW_INLINE_COMMENTS
+#if INI_ALLOW_MULTILINE
+			else if (x_(prev_name) && x_(start) && start > line)
+			{
+#if INI_ALLOW_INLINE_COMMENTS
 				end = ini_find_chars_or_comment(start, VoidPointer.Null);
 				x(end) = '\0';
 				ini_rstrip(start, end);
-				#endif
+#endif
 				/* Non-blank line with leading whitespace, treat as continuation
 				   of previous name's value (as per Python configparser). */
-				if (ne_0(HANDLER(user, section, prev_name, start)) && ne_0(error))
+				if (!HANDLER(user, section, prev_name, start) && !error)
 					error = lineno;
 			}
-			#endif
+#endif
 			else if (x(start) == '[')
 			{
 				/* A "[section]" line */
@@ -253,13 +261,13 @@ public static partial class ini
 						error = lineno;
 					#endif
 				}
-				else if (ne_0(error))
+				else if (!error)
 				{
 					/* No ']' found on section line */
 					error = lineno;
 				}
 			}
-			else if (x_ne_0(start))
+			else if (x(start))
 			{
 				/* Not a comment, must be a name[=:]value pair */
 				end = ini_find_chars_or_comment(start, "=:");
@@ -279,7 +287,7 @@ public static partial class ini
 					ini_strncpy0(prev_name, name, @sizeof(prev_name_));
 					#endif
 					/* Valid name[=:]value pair found, call handler */
-					if (ne_0(HANDLER(user, section, name, value)) && ne_0(error))
+					if (!HANDLER(user, section, name, value) && !error)
 						error = lineno;
 				}
 				else
@@ -291,7 +299,7 @@ public static partial class ini
 					if (!HANDLER(user, section, name, VoidPointer.Null) && !error)
 						error = lineno;
 					#else
-					if (ne_0(error))
+					if (!error)
 						error = lineno;
 					#endif
 				}
@@ -361,10 +369,7 @@ public static partial class ini
 	}
 
 	/* See documentation in header file. */
-	public static partial int ini_parse_string(ConstPointer<char> @string, ini_handler handler, VoidPointer user)
-	{
-		return ini_parse_string_length(@string, strlen(@string), handler, user);
-	}
+	public static partial int ini_parse_string(ConstPointer<char> @string, ini_handler handler, VoidPointer user) => ini_parse_string_length(@string, strlen(@string), handler, user);
 
 	/* See documentation in header file. */
 	public static partial int ini_parse_string_length(ConstPointer<char> @string, size_t length,
