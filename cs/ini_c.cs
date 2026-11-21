@@ -61,6 +61,7 @@ global using size_t = ulong;
 
 using Crt;
 using Crt.System;
+using Crt.Core;
 using static Crt.stdio;
 using static Crt.ctype;
 using static Crt.@string;
@@ -76,7 +77,7 @@ public static partial class ini
 	/* Used by ini_parse_string() to keep track of @string parsing state. */
 	struct ini_parse_string_ctx
 	{
-		public ConstPointer<char> ptr;
+		public ReadOnlyPointer<char> ptr;
 		public size_t num_left;
 	}
 
@@ -91,7 +92,7 @@ public static partial class ini
 	}
 
 	/* Return pointer to first non-whitespace char in given @string. */
-	static Pointer<char> ini_lskip(ConstPointer<char> s)
+	static Pointer<char> ini_lskip(ReadOnlyPointer<char> s)
 	{
 		while (x_(s) && isspace(x(s)))
 			s++;
@@ -101,7 +102,7 @@ public static partial class ini
 	/* Return pointer to first char (of chars) or inline comment in given @string,
 	   or pointer to NUL at end of @string if neither found. Inline comment must
 	   be prefixed by a whitespace character to register as a comment. */
-	static Pointer<char> ini_find_chars_or_comment(ConstPointer<char> s, ConstPointer<char> chars)
+	static Pointer<char> ini_find_chars_or_comment(ReadOnlyPointer<char> s, ReadOnlyCharPointer chars)
 	{
 #if INI_ALLOW_INLINE_COMMENTS
 		bool  was_space = false;
@@ -119,23 +120,23 @@ public static partial class ini
 #endif
 		return (Pointer<char>)s;
 	}
-	static Pointer<char> ini_find_chars_or_comment(ConstPointer<char> s, string chars) =>  ini_find_chars_or_comment(s, chars.AsConstPointer());
+	//static Pointer<char> ini_find_chars_or_comment(ReadOnlyCharPointer s, string chars) => ini_find_chars_or_comment(s, chars.Pointer);
 
 	/* Similar to strncpy, but ensures dest (size bytes) is
 	   NUL-terminated, and doesn't pad with NULs. */
-	static Pointer<char> ini_strncpy0(Pointer<char> dest, ConstPointer<char> src, size_t size)
+	static Pointer<char> ini_strncpy0(Pointer<char> dest, ReadOnlyPointer<char> src, size_t size)
 	{
 		return strncpy(dest, src, size);
 	}
 
 	/* See documentation in header file. */
 	static int ini_parse_stream(ini_reader reader, ref ini_parse_string_ctx stream, ini_handler handler,
-						 VoidPointer user)
+						 Pointer user)
 	{
 		throw new NotImplementedException();
 	}
-	public static partial int ini_parse_stream(ini_reader reader, VoidPointer stream, ini_handler handler,
-						 VoidPointer user)
+	public static partial int ini_parse_stream(ini_reader reader, Pointer<FILE> stream, ini_handler handler,
+						 Pointer<int> user)
 	{
 		/* Uses a fair bit of stack (use heap instead if you need to) */
 		#if INI_USE_STACK
@@ -176,11 +177,11 @@ public static partial class ini
 		#if INI_HANDLER_LINENO
 		//#define HANDLER(u, s, n, v) handler(u, s, n, v, lineno)
 		#else
-		var HANDLER = (VoidPointer u, Pointer<char> s, Pointer<char> n, Pointer<char> v) => handler(u, s, n, v);
+		var HANDLER = (Pointer<int> u, Pointer<char> s, Pointer<char> n, Pointer<char> v) => handler(u, s, n, v);
 		#endif
 
 		/* Scan through stream line by line */
-		while (reader(line, (int)max_line, stream) != VoidPointer.Null)
+		while (reader(line, (int)max_line, stream) != null)
 		{
 			offset = strlen(line);
 
@@ -207,7 +208,7 @@ public static partial class ini
 			/* If line exceeded INI_MAX_LINE bytes, discard till end of line. */
 			if (offset == max_line - 1 && line[offset - 1] != '\n')
 			{
-				while (reader(abyss, SizeOf(abyss), stream) != VoidPointer.Null)
+				while (reader(abyss, SizeOf(abyss), stream) != null)
 				{
 					if (!error)
 						error = lineno;
@@ -235,7 +236,7 @@ public static partial class ini
 			else if (x_(prev_name) && x_(start) && start > line)
 			{
 #if INI_ALLOW_INLINE_COMMENTS
-				end = ini_find_chars_or_comment(start, VoidPointer.Null);
+				end = ini_find_chars_or_comment(start, null);
 				x(end) = '\0';
 				ini_rstrip(start, end);
 #endif
@@ -277,7 +278,7 @@ public static partial class ini
 					name = ini_rstrip(start, end);
 					value = end + 1;
 					#if INI_ALLOW_INLINE_COMMENTS
-					end = ini_find_chars_or_comment(value, VoidPointer.Null);
+					end = ini_find_chars_or_comment(value, null);
 					x(end) = '\0';
 					#endif
 					value = ini_lskip(value);
@@ -319,14 +320,14 @@ public static partial class ini
 	}
 
 	/* See documentation in header file. */
-	public static partial int ini_parse_file(Pointer<FILE> file, ini_handler handler, VoidPointer user)
+	public static partial int ini_parse_file(Pointer<FILE> file, ini_handler handler, Pointer<int> user)
 	{
-		static Pointer<char> fgets(Pointer<char> str, int n, VoidPointer stream) => stdio.fgets(str, n, (Pointer<FILE>)stream);
+		static Pointer<char> fgets(Pointer<char> str, int n, Pointer<FILE> stream) => stdio.fgets(str, n, (Pointer<FILE>)stream);
 		return ini_parse_stream((ini_reader)fgets, file, handler, user);
 	}
 
 	/* See documentation in header file. */
-	public static partial int ini_parse(ConstPointer<char> filename, ini_handler handler, VoidPointer user)
+	public static partial int ini_parse(ReadOnlyCharPointer filename, ini_handler handler, Pointer<int> user)
 	{
 		Pointer<FILE> file;
 		int error;
@@ -341,45 +342,45 @@ public static partial class ini
 
 	/* An ini_reader function to read the next line from a @string buffer. This
 	   is the fgets() equivalent used by ini_parse_string(). */
-	static Pointer<char> ini_reader_string(Pointer<char> str, int num, VoidPointer stream)
-	{
-		Pointer<ini_parse_string_ctx> ctx = (Pointer<ini_parse_string_ctx>)stream;
-		ConstPointer<char> ctx_ptr = x(ctx).ptr;
-		size_t ctx_num_left = x(ctx).num_left;
-		Pointer<char> strp = str;
-		char c;
+	//static Pointer<char> ini_reader_string(Pointer<char> str, int num, VoidPointer stream)
+	//{
+	//	Pointer<ini_parse_string_ctx> ctx = (Pointer<ini_parse_string_ctx>)stream;
+	//	ReadOnlyCharPointer ctx_ptr = x(ctx).ptr;
+	//	size_t ctx_num_left = x(ctx).num_left;
+	//	Pointer<char> strp = str;
+	//	char c;
 
-		if (ctx_num_left == 0 || num < 2)
-			return VoidPointer.Null;
+	//	if (ctx_num_left == 0 || num < 2)
+	//		return null;
 
-		while (num > 1 && ctx_num_left != 0)
-		{
-			c = x(ctx_ptr++);
-			ctx_num_left--;
-			x(strp++) = c;
-			if (c == '\n')
-				break;
-			num--;
-		}
+	//	while (num > 1 && ctx_num_left != 0)
+	//	{
+	//		c = x(ctx_ptr++);
+	//		ctx_num_left--;
+	//		x(strp++) = c;
+	//		if (c == '\n')
+	//			break;
+	//		num--;
+	//	}
 
-		x(strp) = '\0';
-		x(ctx).ptr = ctx_ptr;
-		x(ctx).num_left = ctx_num_left;
-		return str;
-	}
-
-	/* See documentation in header file. */
-	public static partial int ini_parse_string(ConstPointer<char> @string, ini_handler handler, VoidPointer user) => ini_parse_string_length(@string, strlen(@string), handler, user);
+	//	x(strp) = '\0';
+	//	x(ctx).ptr = ctx_ptr;
+	//	x(ctx).num_left = ctx_num_left;
+	//	return str;
+	//}
 
 	/* See documentation in header file. */
-	public static partial int ini_parse_string_length(ConstPointer<char> @string, size_t length,
-								ini_handler handler, VoidPointer user)
-	{
-		ini_parse_string_ctx ctx;
+	//public static partial int ini_parse_string(ReadOnlyCharPointer @string, ini_handler handler, VoidPointer user) => ini_parse_string_length(@string, strlen(@string), handler, user);
 
-		ctx.ptr = @string;
-		ctx.num_left = length;
-		return ini_parse_stream((ini_reader)ini_reader_string, ref ctx, handler,
-								user);
-	}
+	/* See documentation in header file. */
+	//public static partial int ini_parse_string_length(ReadOnlyCharPointer @string, size_t length,
+	//							ini_handler handler, VoidPointer user)
+	//{
+	//	ini_parse_string_ctx ctx;
+
+	//	ctx.ptr = @string;
+	//	ctx.num_left = length;
+	//	return ini_parse_stream((ini_reader)ini_reader_string, ref ctx, handler,
+	//							user);
+	//}
 }

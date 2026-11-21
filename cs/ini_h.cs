@@ -15,6 +15,7 @@ https://github.com/benhoyt/inih
 // Ignore Spelling: ini
 
 using Crt;
+using Crt.Core;
 
 namespace inih;
 public static partial class ini
@@ -31,12 +32,12 @@ public static partial class ini
 						   const char* name, const char* value,
 						   int lineno);
 #else
-	public delegate int ini_handler(VoidPointer user, ConstPointer<char> section,
-						   ConstPointer<char> name, ConstPointer<char> value);
+	public delegate int ini_handler(Pointer<int> user, ReadOnlyPointer<char> section,
+						   ReadOnlyPointer<char> name, ReadOnlyPointer<char> value);
 #endif
 
 	/* Typedef for prototype of fgets-style reader function. */
-	public delegate Pointer<char> ini_reader(Pointer<char> str, int num, VoidPointer stream);
+	public delegate Pointer<char> ini_reader(Pointer<char> str, int num, Pointer<FILE> stream);
 
 
 	/* Parse given INI-style file. May have [section]s, name=value pairs
@@ -52,27 +53,27 @@ public static partial class ini
 	   stop on first error), -1 on file open error, or -2 on memory allocation
 	   error (only when INI_USE_STACK is zero).
 	*/
-	public static partial int ini_parse(ConstPointer<char> filename, ini_handler handler, VoidPointer user);
+	public static partial int ini_parse(ReadOnlyCharPointer filename, ini_handler handler, Pointer<int> user);
 
 	/* Same as ini_parse(), but takes a FILE* instead of filename. This doesn't
 	   close the file when it's finished -- the caller must do that. */
-	public static partial int ini_parse_file(Pointer<FILE> file, ini_handler handler, VoidPointer user);
+	public static partial int ini_parse_file(Pointer<FILE> file, ini_handler handler, Pointer<int> user);
 
 	/* Same as ini_parse(), but takes an ini_reader function pointer instead of
 	   filename. Used for implementing custom or string-based I/O (see also
 	   ini_parse_string). */
-	public static partial int ini_parse_stream(ini_reader reader, VoidPointer stream, ini_handler handler,
-						 VoidPointer user);
+	public static partial int ini_parse_stream(ini_reader reader, Pointer<FILE> stream, ini_handler handler,
+						 Pointer<int> user);
 
 	/* Same as ini_parse(), but takes a zero-terminated string with the INI data
 	   instead of a file. Useful for parsing INI data from a network socket or
 	   which is already in memory. */
-	public static partial int ini_parse_string(ConstPointer<char> @string, ini_handler handler, VoidPointer user);
+	//public static partial int ini_parse_string(ReadOnlyCharPointer @string, ini_handler handler, VoidPointer user);
 
 	/* Same as ini_parse_string(), but takes a string and its length, avoiding
 	   strlen(). Useful for parsing INI data from a network socket or which is
 	   already in memory, or interfacing with C++ std::string_view. */
-	public static partial int ini_parse_string_length(ConstPointer<char> @string, size_t length, ini_handler handler, VoidPointer user);
+	//public static partial int ini_parse_string_length(ReadOnlyCharPointer @string, size_t length, ini_handler handler, VoidPointer user);
 
 	/* Chars that begin a start-of-line comment. Per Python configparser, allow
 	   both ; and # comments at the start of a line by default. */
