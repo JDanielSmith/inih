@@ -1,5 +1,5 @@
 ﻿using Crt;
-using System.Xml.Linq;
+using Crt.Core;
 using static Crt.stdio;
 using static Crt.stdlib;
 using static Crt.@string;
@@ -16,8 +16,8 @@ internal static partial class unittest
 	int dumper(void* user, const char* section, const char* name,
 			   const char* value, int lineno)
 #else
-	static int dumper(VoidPointer user, ConstPointer<char> section, ConstPointer<char> name,
-		   ConstPointer<char> value)
+	static int dumper(Pointer<int> user, ReadOnlyPointer<char> section, ReadOnlyPointer<char> name,
+		   ReadOnlyPointer<char> value)
 #endif
 	{
 		User = x((Pointer<int>)user);
@@ -48,11 +48,11 @@ internal static partial class unittest
 	}
 
 
-	static int parse(ConstPointer<char> fname) =>  parse_.Invoke(fname);
+	static int parse(ReadOnlyPointer<char> fname) =>  parse_.Invoke(fname);
 	static class parse_
 	{
 		static int[] u_ = [100]; static ref int u => ref u_[0];
-		static internal int Invoke(ConstPointer<char> fname)
+		static internal int Invoke(ReadOnlyPointer<char> fname)
 		{
 			int e;
 			Prev_section[0] = '\0';
@@ -66,6 +66,6 @@ internal static partial class unittest
 
 	internal static int parse(string fname)
 	{
-		return parse(fname.AsConstPointer());
+		return parse(fname.Pointer);
 	}
 }
